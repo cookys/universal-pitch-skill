@@ -60,6 +60,7 @@ from the codebase. No marketing spin yet.
     "name": "",
     "one_liner": "≤15 words, what it does",
     "repo_url": "",
+    "type": "gui | cli | api | infrastructure | hybrid",
     "tech_stack": { "backend": [], "frontend": [], "integrations": [] }
   },
   "features": [
@@ -252,12 +253,14 @@ Series A+ (15-18 slides): add GTM, unit economics, case studies, financials.
 ### Landing Page Structure (Trust-Building Curve)
 
 ```
-Hero         → "What is this?"       Full screenshot, ≤8-word H1, single CTA
+Hero         → "What is this?"       Visual proof + ≤8-word H1 + single CTA
+                                     GUI: full screenshot | CLI/API: code snippet + output
 Pain Points  → "I have this problem" 3 cards from JTBD emotional layer
-Features     → "This solves it"      Alternating layout, cropped screenshots
+Features     → "This solves it"      Alternating layout, visual per feature
+                                     GUI: cropped screenshots | CLI/API: input→output demos
 Social Proof → "Others trust it"     Quotes with name+title (not star ratings)
-How It Works → "It's easy"           3-4 steps
-Gallery      → "It looks real"       Screenshot variety
+How It Works → "It's easy"           3-4 steps (GUI: screenshots | CLI: terminal steps)
+Gallery      → "It looks real"       GUI: screenshot variety | CLI/API: integration map
 Pricing      → "I can afford it"     3-tier, highlight middle
 CTA          → "Let me try"          Single clear action
 ```
@@ -273,7 +276,22 @@ Hero rules: outcome-focused H1, single CTA above fold, LCP < 2.5s.
 | CTA | "Invest $Xm" | "Free trial" |
 | Focus | Why WE can do this | Why YOU need this |
 
-### Screenshot Strategy
+### Visual Strategy
+
+First, determine your product type — the visual approach is fundamentally different:
+
+```
+Has GUI (web app, dashboard, mobile)?
+  → Screenshot Strategy (below)
+
+No GUI (CLI, API, SDK, infrastructure, data pipeline)?
+  → Non-UI Visual Strategy (below)
+
+Hybrid (API with dashboard, CLI with web console)?
+  → Mix both — dashboard screenshots for overview, code/terminal for technical depth
+```
+
+#### Screenshot Strategy (GUI Products)
 
 Before any screenshot, ask: **"What is this screenshot's JOB?"**
 
@@ -285,11 +303,58 @@ Before any screenshot, ask: **"What is this screenshot's JOB?"**
 
 **Navigation**: hide by default (inject CSS). Exception: when nav structure IS the value.
 
-**Dark themes**: fine for technical audiences. Add border/glow to prevent melting into dark backgrounds. Never place on white backgrounds.
+**Dark themes**: fine for technical audiences. Add border/glow to prevent melting into backgrounds. Never place on white backgrounds.
 
-**Anonymization**: remove identifiers, preserve behavioral realism. Keep real number magnitudes. Realistic variance (not all round numbers).
+**Anonymization**: remove identifiers, preserve behavioral realism. Keep real number magnitudes and realistic variance (not all round numbers).
 
 See `references/screenshot-automation.md` for Playwright templates and gotchas.
+
+#### Non-UI Visual Strategy (CLI / API / Infrastructure Products)
+
+The universal formula for non-UI products is **Input → Magic → Output**:
+
+```
+Show the developer's code/command (Input)
+  → Your product processes it (Magic — can be invisible)
+  → Show the tangible result (Output)
+
+Examples:
+  Stripe:    code snippet → Stripe API → payment confirmation
+  Twilio:    API call → Twilio → phone rings on stage
+  Terraform: HCL config → terraform apply → infrastructure graph
+  Vercel:    git push → Vercel → deployed URL in 8 seconds
+```
+
+Visual asset types by effectiveness:
+
+| Asset Type | Best For | Tools |
+|-----------|----------|-------|
+| **Code snippet** (syntax-highlighted) | Technical buyers, hero sections | Carbon.now.sh, Ray.so, Shiki |
+| **Terminal recording** (GIF/video) | Technical buyers, "see it work" | VHS (charmbracelet), asciinema |
+| **API request → response** | Technical buyers, feature proof | Hand-crafted HTML, Readme.io |
+| **Architecture diagram** | All audiences, system overview | D2, Excalidraw, Mermaid, Structurizr |
+| **Before/After flow diagram** | Investors, non-technical buyers | Figma, Whimsical |
+| **Metrics growth chart** | Investors, traction slide | Recharts, Flourish, simple SVG |
+| **Integration ecosystem map** | Non-technical buyers, partnerships | Figma, logo grid |
+| **Live embed** | Technical buyers, "try it now" | CodeSandbox, StackBlitz |
+
+**Choosing by audience:**
+
+- **Investors (non-technical)**: metrics chart > before/after flow > customer logos > integration map. No raw code. They spend ~2 min on a deck — visuals must be instantly readable.
+- **Technical buyers (engineers, CTO)**: code snippet > terminal GIF > API example > architecture diagram. They want to see it's real and evaluate adoption effort.
+- **Non-technical buyers (PM, VP)**: before/after process flow > integration map > customer logos > metrics dashboard. Avoid terminal output.
+
+**Auto-generating visuals from codebase:**
+
+| What | Tool |
+|------|------|
+| Architecture diagram from code | Swark (LLM-based), Structurizr (C4 model) |
+| API docs → interactive page | Readme.io, Bump.sh (from OpenAPI spec) |
+| Terminal demo | VHS tape scripts (version-controllable) |
+| Flowcharts from code | code2flow (Python) |
+| Code snippets | Extract from README/examples/, syntax-highlight with Ray.so |
+
+See `references/visual-assets.md` for templates and detailed tool guides.
 See `references/frameworks.md` for JTBD templates and YC question lists.
 
 ---
