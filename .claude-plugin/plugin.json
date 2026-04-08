@@ -1,0 +1,8 @@
+{
+  "name": "pitch-craft",
+  "version": "0.1.0",
+  "description": "Codebase-to-pitch pipeline — scans any SaaS project, identifies personas and pain points, then generates pitch deck and landing page materials.",
+  "author": {
+    "name": "Cookys Lin / Stranity"
+  }
+}

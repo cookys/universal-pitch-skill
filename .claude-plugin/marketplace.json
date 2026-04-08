@@ -1,0 +1,14 @@
+{
+  "name": "pitch-craft",
+  "owner": {
+    "name": "Cookys Lin / Stranity"
+  },
+  "plugins": [
+    {
+      "name": "pitch-craft",
+      "source": "./",
+      "version": "0.1.0",
+      "description": "Codebase-to-pitch pipeline — 4-phase multi-agent skill that scans any SaaS project, identifies personas/pain points (YC/JTBD), then generates pitch deck and landing page materials. Supports GUI and non-UI products."
+    }
+  ]
+}

@@ -26,16 +26,22 @@
 
 ## 安裝
 
+### Claude Code Marketplace（推薦）
+
 ```bash
-# Clone 到你的 Claude Code 專案
-git clone https://github.com/cookys/universal-pitch-skill.git \
-  .claude/skills/pitch-craft
+claude install github:cookys/universal-pitch-skill
 ```
 
-或手動複製：
+### 手動安裝
 
 ```bash
-cp -r universal-pitch-skill/ your-project/.claude/skills/pitch-craft/
+# 方法 1: Clone 為 plugin
+git clone https://github.com/cookys/universal-pitch-skill.git \
+  ~/.claude/plugins/pitch-craft
+
+# 方法 2: 只複製 skill 到專案
+cp -r universal-pitch-skill/skills/pitch-craft/ \
+  your-project/.claude/skills/pitch-craft/
 ```
 
 ## 使用方式
@@ -58,12 +64,16 @@ cp -r universal-pitch-skill/ your-project/.claude/skills/pitch-craft/
 ## 檔案結構
 
 ```
-SKILL.md                          # 主 skill — 四階段 pipeline
-references/
-├── frameworks.md                 # YC 七問、JTBD、VPC、Mom Test、賣點範例、2x2 矩陣
-├── screenshot-automation.md      # Playwright 模板、匿名化、同步流程
-└── visual-assets.md              # 非 UI 視覺：code snippet、terminal GIF（VHS）、
-                                  # 架構圖（D2/Swark）、before/after 流程圖
+.claude-plugin/
+├── plugin.json                   # Plugin metadata（名稱、版本、作者）
+└── marketplace.json              # Claude Code marketplace 註冊
+skills/
+└── pitch-craft/
+    ├── SKILL.md                  # 主 skill — 四階段 pipeline
+    └── references/
+        ├── frameworks.md         # YC 七問、JTBD、VPC、Mom Test、2x2 矩陣
+        ├── screenshot-automation.md  # Playwright 模板、匿名化、同步
+        └── visual-assets.md      # 非 UI：code snippet、terminal GIF、架構圖
 ```
 
 ## 包含的框架

@@ -26,16 +26,22 @@ This skill bridges that gap using frameworks from YC (Seibel's 7 Questions), JTB
 
 ## Installation
 
+### Claude Code Marketplace (Recommended)
+
 ```bash
-# Clone into your Claude Code project
-git clone https://github.com/cookys/universal-pitch-skill.git \
-  .claude/skills/pitch-craft
+claude install github:cookys/universal-pitch-skill
 ```
 
-Or copy manually:
+### Manual Install
 
 ```bash
-cp -r universal-pitch-skill/ your-project/.claude/skills/pitch-craft/
+# Option 1: Clone as plugin
+git clone https://github.com/cookys/universal-pitch-skill.git \
+  ~/.claude/plugins/pitch-craft
+
+# Option 2: Copy skill only into a project
+cp -r universal-pitch-skill/skills/pitch-craft/ \
+  your-project/.claude/skills/pitch-craft/
 ```
 
 ## Usage
@@ -58,13 +64,16 @@ You can also run individual phases:
 ## File Structure
 
 ```
-SKILL.md                          # Main skill — 4-phase pipeline
-references/
-├── frameworks.md                 # YC 7 Questions, JTBD, Value Proposition Canvas,
-│                                 # Mom Test, selling point examples, 2x2 matrix
-├── screenshot-automation.md      # Playwright templates, anonymization, sync workflow
-└── visual-assets.md              # Non-UI visuals: code snippets, terminal GIF (VHS),
-                                  # architecture diagrams (D2/Swark), before/after flows
+.claude-plugin/
+├── plugin.json                   # Plugin metadata (name, version, author)
+└── marketplace.json              # Claude Code marketplace registration
+skills/
+└── pitch-craft/
+    ├── SKILL.md                  # Main skill — 4-phase pipeline
+    └── references/
+        ├── frameworks.md         # YC 7 Questions, JTBD, VPC, Mom Test, 2x2 matrix
+        ├── screenshot-automation.md  # Playwright templates, anonymization, sync
+        └── visual-assets.md      # Non-UI: code snippets, terminal GIF, architecture
 ```
 
 ## Frameworks Included
