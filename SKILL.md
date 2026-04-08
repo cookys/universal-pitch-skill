@@ -1,75 +1,214 @@
 ---
 name: pitch-craft
 description: >
-  Universal pitch deck and landing page craft — narrative structure, selling point
-  distillation, screenshot strategy, and conversion optimization. Use this skill
-  whenever creating or updating pitch decks, landing pages, product marketing pages,
-  or investor materials. Also invoke when translating product features into marketing
-  language, retaking product screenshots, or preparing for investor/customer demos.
-  If someone asks "how should we present this feature", "update the pitch", "make a
-  landing page", or "prepare for the investor meeting", this is the skill to use.
+  Codebase-to-pitch pipeline — scans any SaaS project, identifies personas and pain
+  points, then generates pitch deck and landing page materials. Use this skill whenever
+  creating or updating pitch decks, landing pages, investor materials, or marketing
+  pages. Also invoke when translating product features into selling points, retaking
+  product screenshots, or preparing for demos. Triggers: "make a pitch", "update the
+  pitch deck", "create a landing page", "how should we present this feature", "prepare
+  for the investor meeting", "what's our value proposition", "who are our users".
 ---
 
 # Pitch Craft
 
-A framework for creating compelling pitch decks and landing pages for SaaS products.
-Covers narrative structure, selling point distillation, screenshot strategy, and
-pre-ship quality gates. Works for any stage (Seed through Series B) and any SaaS product.
+A multi-agent pipeline that transforms a codebase into investor-grade pitch decks and
+high-conversion landing pages. Based on YC methodology, JTBD framework, and real
+startup pitch experience.
 
-## Narrative Architecture
-
-### Pitch Deck Structure
-
-Every slide answers one question: **"What's the Before/After gap?"**
-If a slide has no clear gap, cut it.
-
-#### Seed / Angel (10-12 slides)
+## The Pipeline
 
 ```
-1.  Cover          — One-sentence positioning (≤8 words)
-2.  Problem        — Compress, don't delete. One real number, one scene, 20 sec.
-3.  Solution       — How you fix it + proof screenshot
-4.  Product        — Core features (2-3 screenshots max)
-5.  Market         — TAM/SAM with visible calculation logic
-6.  Traction       — Real numbers (users, revenue, engagement)
-7.  Business Model — Pricing tiers, highlight recommended
-8.  Competition    — 2x2 matrix on YOUR axes, don't name competitors
-9.  Team           — Why THIS team executes
-10. Ask            — Amount + allocation breakdown
+Phase 1: Project Discovery    → Scanner agent reads codebase, extracts product essence
+Phase 2: Persona & Pain Point → UX Architect identifies who hurts and why
+Phase 3: Pitch Creation       → Marketing Pro crafts deck + landing page
+Phase 4: Review Gate          → Quality checks before shipping
 ```
 
-#### Series A+ (15-18 slides)
+Each phase has a defined input/output contract. Phases run sequentially — each one
+depends on the previous output.
 
-Add after Traction: GTM strategy, unit economics (CAC/LTV/payback), financial projections, customer case studies.
+---
 
-#### Slide Count Wisdom
+## Phase 1: Project Discovery (Scanner)
 
-The "10 slides" rule (Kawasaki) is a Seed heuristic, not gospel. Series A investors want depth — 16-18 slides with GTM and financials is normal. The real rule: **every slide must earn its place with a clear Before/After gap.**
+**Agent**: Use a fast model (Haiku) via `Explore` subagent to scan broadly.
 
-### Landing Page Structure
+**Goal**: Extract what the product does, who it's for, and what evidence exists — purely
+from the codebase. No marketing spin yet.
 
-Visitors progress through a trust arc — each section earns permission for the next:
+### What to Scan
+
+| Source | What to Extract |
+|--------|----------------|
+| `README.md`, `ABOUT.md` | Official positioning, "what it does" |
+| `CHANGELOG.md`, git log (3 months) | Feature velocity, what gets worked on most |
+| Route handlers / API endpoints | Functional surface area |
+| DB schema / migrations | Data model = feature boundaries |
+| `package.json` / `Cargo.toml` / `go.mod` | Tech stack, key dependencies |
+| i18n files | Supported locales, UI text = feature names |
+| Test descriptions | Implied user scenarios |
+| `.env.example` | Subsystems (payment, email, auth providers) |
+| `doc/specs/`, `doc/proposals/` | Original problem definitions |
+| Pricing config / feature flags | Tiers, experiments, unreleased capabilities |
+
+### Scanner Output Contract
+
+```json
+{
+  "product": {
+    "name": "",
+    "one_liner": "≤15 words, what it does",
+    "repo_url": "",
+    "tech_stack": { "backend": [], "frontend": [], "integrations": [] }
+  },
+  "features": [
+    {
+      "name": "",
+      "description": "",
+      "complexity": "core | secondary | experimental",
+      "commit_frequency": "high | medium | low",
+      "implied_pain": "what problem this feature seems to solve"
+    }
+  ],
+  "audience_hints": {
+    "personas": ["role names found in code/docs"],
+    "industries": [],
+    "company_size_hints": ""
+  },
+  "traction_signals": {
+    "users_or_customers": "",
+    "repos_or_data_points": "",
+    "feature_iterations": "",
+    "age_of_project": ""
+  },
+  "pricing_hints": "",
+  "competitive_signals": "any competitor names found in docs/code"
+}
+```
+
+### Scanner Prompt Template
 
 ```
-Hero         → "What is this?"       Establish category, single CTA
-Pain Points  → "I have this problem" 3 cards, emotional hooks
-Features     → "This solves it"      Alternating left/right, screenshots
-Social Proof → "Others trust it"     Specific quotes (name+title, not stars)
-How It Works → "It's easy"           3-4 steps
-Gallery      → "It looks real"       Screenshot variety
-Pricing      → "I can afford it"     3-tier, highlight middle plan
-CTA          → "Let me try"          Single clear action
+Scan this codebase and extract product intelligence. Read these files in order:
+1. README.md and any doc/ files (understand positioning)
+2. Route/handler files (map features)
+3. DB schema/migrations (understand data model)
+4. Git log --oneline -100 (see recent work)
+5. i18n/test files (find user-facing language)
+
+Output the JSON structure above. Be factual — extract what IS, don't invent
+what SHOULD BE. If a field can't be determined, write "unknown".
 ```
 
-**Hero rules:**
-- H1 ≤ 8 words, focused on outcome not feature
-- Single primary CTA above the fold
-- LCP < 2.5s (test it — slow hero = 90%+ bounce)
-- Trust signal row (customer logos or key stats) below CTA
+---
 
-## Selling Point Distillation
+## Phase 2: Persona & Pain Point Analysis (UX Architect)
 
-Raw feature descriptions don't belong in pitch materials. Transform through three layers:
+**Agent**: Use `voltagent-biz:ux-researcher` or similar UX-focused agent.
+
+**Goal**: Transform scanner output into personas, pain points, and emotional journeys
+using YC + JTBD methodology.
+
+### Framework: JTBD × Value Proposition Canvas
+
+For each persona identified by the scanner:
+
+**Step 1 — Define the Job (JTBD format)**
+
+```
+When I [situation/trigger],
+I want to [motivation/action],
+So I can [expected outcome].
+```
+
+Three layers per job:
+- **Functional**: The actual task ("Review my team's code contributions in 5 minutes")
+- **Social**: How they want to be perceived ("Be seen as a data-driven manager")
+- **Emotional**: How they want to feel ("Confident my assessments are fair")
+
+**Step 2 — Map the Before/After Canvas**
+
+| Dimension | Before (Pain) | After (Gain) |
+|-----------|--------------|--------------|
+| Time | Hours doing X | Minutes with product |
+| Quality | Subjective, error-prone | Objective, data-backed |
+| Confidence | "Am I missing something?" | "I see the full picture" |
+| Cost | $X in manual labor | $Y subscription |
+
+**Step 3 — Extract Emotional Beats**
+
+Map the user's emotional journey through the product:
+1. **First impression** (0-10 sec): What creates trust or skepticism?
+2. **Aha moment** (10-60 sec): When do they realize "this is different"?
+3. **Value delivery** (1-5 min): When do they get the actual outcome?
+4. **Retention hook**: Why do they come back tomorrow?
+
+### Seibel's Seven Questions (Validation)
+
+After the JTBD analysis, validate by answering Michael Seibel's seven questions:
+
+1. **What do you do?** — Company name + one sentence + one concrete example
+2. **How big is the market?** — TAM/SAM with transparent math, not Gartner quotes
+3. **What's your traction?** — Numbers with time frame ("$0 to $10k MRR in 3 months")
+4. **What's your unique insight?** — What do you know that others don't?
+5. **What's your business model?** — How you make money, validated or assumed?
+6. **Who's your team?** — Specific achievements, not titles
+7. **What do you want?** — Exact amount + 18-24 month milestones
+
+**Clarity test**: Send the one-liner to a smart friend. If they ask a clarifying question, rewrite. (Seibel's "Email Test")
+
+### UX Architect Output Contract
+
+```markdown
+# Persona: [Role Name]
+
+## Job to Be Done
+"When I [situation], I want to [motivation], so I can [outcome]."
+
+- Functional: [task-level job]
+- Social: [perception job]  
+- Emotional: [feeling job]
+
+## Before → After Canvas
+| Dimension | Before | After |
+|-----------|--------|-------|
+| ... | ... | ... |
+
+## Emotional Beats
+1. First impression: "..."
+2. Aha moment: "..."
+3. Value delivery: "..."
+4. Retention hook: "..."
+
+## Selling Points (per channel)
+- Investor: "..." (differentiation, moat, market size)
+- Customer: "..." (pain resolution, outcome)
+
+## Seibel Seven Answers
+1. What we do: ...
+2. Market size: ...
+3. Traction: ...
+4. Unique insight: ...
+5. Business model: ...
+6. Team: ...
+7. Ask: ...
+```
+
+Produce one block per persona (typically 2-3 personas: buyer, user, champion).
+
+---
+
+## Phase 3: Pitch Material Creation (Marketing Pro)
+
+**Agent**: Use `voltagent-biz:content-marketer` or marketing-focused agent.
+
+**Goal**: Transform UX analysis into pitch deck structure + landing page structure +
+screenshot strategy.
+
+### Selling Point Distillation (3-Layer Framework)
+
+Every feature must pass through three layers before appearing in pitch materials:
 
 ```
 Layer 1: Feature → Capability
@@ -82,121 +221,120 @@ Layer 2: Capability → Emotional Outcome
 
 Layer 3: Emotional Outcome → Narrative Hook
   Pick a frame:
-  - Contrast:  "Before: email attachments / After: real-time sync"
+  - Contrast:  "Before: email attachments → After: real-time sync"
   - Quantify:  "From 3-day review cycles to 5-minute feedback"
   - Social:    "Your whole team sees changes as they happen"
 ```
 
-The reason this matters: technical audiences don't reject stories — they reject *empty* stories. Data wrapped in narrative is the most persuasive format. A feature list is forgettable; an emotional contrast backed by a number is not.
+Why this matters: technical audiences don't reject stories — they reject *empty* stories.
+Data wrapped in narrative is the most persuasive format.
 
-### Audience-Specific Framing
+### Pitch Deck Structure (YC-influenced)
 
-The same feature needs different language depending on who's reading:
+Every slide answers: **"What's the Before/After gap?"** No gap → cut the slide.
+
+```
+Seed/Angel (10-12 slides):
+1.  Cover          — One-sentence positioning (≤8 words)
+2.  Problem        — One real number, one scene, 20 seconds max
+3.  Solution       — How you fix it + proof screenshot
+4.  Product        — Core features (2-3 screenshots)
+5.  Market         — TAM/SAM with visible calculation logic
+6.  Traction       — Numbers WITH time frame
+7.  Business Model — Pricing tiers, highlight recommended
+8.  Competition    — 2x2 matrix on YOUR axes
+9.  Team           — Achievements, not titles
+10. Ask            — Exact amount + allocation + milestones
+
+Series A+ (15-18 slides): add GTM, unit economics, case studies, financials.
+```
+
+### Landing Page Structure (Trust-Building Curve)
+
+```
+Hero         → "What is this?"       Full screenshot, ≤8-word H1, single CTA
+Pain Points  → "I have this problem" 3 cards from JTBD emotional layer
+Features     → "This solves it"      Alternating layout, cropped screenshots
+Social Proof → "Others trust it"     Quotes with name+title (not star ratings)
+How It Works → "It's easy"           3-4 steps
+Gallery      → "It looks real"       Screenshot variety
+Pricing      → "I can afford it"     3-tier, highlight middle
+CTA          → "Let me try"          Single clear action
+```
+
+Hero rules: outcome-focused H1, single CTA above fold, LCP < 2.5s.
+
+### Audience-Specific Messaging
 
 | Dimension | Pitch Deck (Investors) | Landing Page (Customers) |
 |-----------|----------------------|--------------------------|
-| Opening | Market opportunity + team strength | Your pain, we understand |
-| Evidence | TAM, CAC, NRR, competition matrix | User quotes, quantified results |
-| CTA | "Invest $Xm" (strong signal) | "Free trial" (low risk) |
-| Cadence | Problem → Market → Solution → Team → Ask | Pain → Solution → Proof → Action |
-| Focus | Why WE can do this (team moat) | Why YOU need this (outcome) |
+| Opening | Market opportunity + team | Your pain, we understand |
+| Evidence | TAM, CAC, NRR, moat | User quotes, time saved |
+| CTA | "Invest $Xm" | "Free trial" |
+| Focus | Why WE can do this | Why YOU need this |
 
-Technical B2B audiences (engineering managers) respond best to **data wrapped in narrative** — neither pure data nor pure story. Lead with a specific number, frame it in a concrete scenario.
+### Screenshot Strategy
 
-## Screenshot Strategy
-
-### The Screenshot Job Decision Tree
-
-Before taking any screenshot, ask: **"What is this screenshot's JOB?"**
+Before any screenshot, ask: **"What is this screenshot's JOB?"**
 
 | Job | Treatment | Use for |
 |-----|-----------|---------|
-| Establish product category | Full-page, navigation hidden, show UI quality | Hero, first-impression slides |
-| Prove a specific value claim | Crop to the UI region supporting the claim | Feature sections, demo slides |
-| Create emotional anchor / wow | Spotlight (highlight key element, dim rest) | Differentiator slides, gallery |
+| Establish product category | Full-page, nav hidden | Hero, first impressions |
+| Prove a specific value claim | Crop to supporting region | Feature sections |
+| Create emotional anchor | Spotlight effect | Differentiator slides |
 
-### Navigation / Chrome Removal
+**Navigation**: hide by default (inject CSS). Exception: when nav structure IS the value.
 
-For pitch and marketing screenshots, product navigation (sidebars, top bars) is typically visual noise — it takes up space without communicating value. Hide it unless the navigation structure itself is your differentiator.
+**Dark themes**: fine for technical audiences. Add border/glow to prevent melting into dark backgrounds. Never place on white backgrounds.
 
-Technique: inject CSS before screenshotting to hide nav elements and let content fill the viewport.
+**Anonymization**: remove identifiers, preserve behavioral realism. Keep real number magnitudes. Realistic variance (not all round numbers).
 
-Exception: when your product's information architecture IS the selling point (e.g., a project management tool where the sidebar structure shows workflow integration).
+See `references/screenshot-automation.md` for Playwright templates and gotchas.
+See `references/frameworks.md` for JTBD templates and YC question lists.
 
-### Dark Theme Products
+---
 
-Dark themes actually help with technical audiences — they match the IDE aesthetic and signal "this is a real dev tool." But they need care:
+## Phase 4: Review Gate
 
-- Add subtle border or glow so screenshots don't melt into dark backgrounds
-- Test on projectors at low brightness — ensure sufficient contrast
-- Never place dark screenshots on white/light backgrounds
-- Use dark gradient backgrounds in pitch materials to match
-
-### Data Anonymization
-
-If screenshots contain customer data, anonymize while preserving realism:
-
-- **Names**: realistic fake names matching the locale
-- **Numbers**: keep real magnitude (don't change 87 to 3 — audiences spot fake data)
-- **Companies**: same-industry fictional names
-- **Distribution**: maintain realistic variance (not all 100%, not all identical)
-
-The goal is **"remove identifiers, preserve behavioral realism."** Perfect round numbers, identical scores, and too-clean distributions all signal "this is a demo" and erode trust.
-
-### Screenshot-Text Pairing
-
-Each screenshot needs companion text in three layers:
-
-```
-Top:    Verb + Result (6-12 chars)    "Ship 2x faster"
-Middle: Quantified contrast (≤30 ch)  "From 3-day cycles to 5 minutes"
-Bottom: CTA or emotional closure      "Start free →"
-```
-
-Visual rhythm on landing pages: alternate large screenshot → text → small screenshot → text to prevent scroll fatigue.
-
-### Screenshot Automation (Playwright)
-
-For products with many pages, automate screenshot capture:
-
-```
-1. Set consistent viewport (e.g., 1440x900)
-2. Navigate to page
-3. Wait for data load (networkidle + buffer)
-4. Inject CSS to hide navigation
-5. Inject anonymization script if needed
-6. Take screenshot (viewport or fullPage)
-```
-
-Key pitfalls from real experience:
-- `page.evaluate(stringFn)` silently fails — pass as function reference
-- `cp -r` doesn't reliably overwrite existing directories — `rm -rf` first then copy
-- If screenshots are baked into Docker images, rebuild with `--no-cache`
-- Navigation collapse state often doesn't persist across page navigations — use CSS injection instead of UI clicks
-
-See `references/screenshot-automation.md` for detailed workflow templates.
-
-## Review Gate
-
-Before shipping any pitch update, check all eight:
+Before shipping, check all eight:
 
 1. **Narrative coherence** — Every slide/section answers "Before/After gap"
-2. **Data integrity** — All numbers real or clearly sourced (no invented metrics)
-3. **Visual consistency** — Same viewport, same nav state, same anonymization everywhere
-4. **Screenshot-text alignment** — Each screenshot proves the adjacent text's claim
-5. **Audience match** — Deck speaks investor language; landing page speaks customer pain
-6. **Anonymization complete** — Zero real names, emails, company names, or repo names
-7. **Asset sync verified** — Source files = deployed files (check hashes if using build pipeline)
-8. **Live test** — Open deployed URL, scroll entire page, all images load correctly
+2. **Data integrity** — All numbers real or sourced (no invented metrics)
+3. **Seibel Seven** — Can you answer all 7 questions clearly? Email Test passed?
+4. **Screenshot-text alignment** — Each screenshot proves the adjacent claim
+5. **Audience match** — Deck = investor language; Landing = customer pain
+6. **Anonymization** — Zero real names, emails, companies, repos
+7. **Asset sync** — Source files = deployed files (check hashes)
+8. **Live test** — Open deployed URL, scroll everything, all images load
 
-## Common Anti-Patterns
+---
+
+## Invoking the Pipeline
+
+When invoking this skill, you can run the full pipeline or jump to a specific phase:
+
+```
+Full pipeline:   "Create a pitch for this project"
+                 → Run Phase 1 → 2 → 3 → 4
+
+Update existing: "Add this new feature to the pitch"
+                 → Skip to Phase 3 (distill the feature, update materials)
+
+Review only:     "Check if the pitch is ready for investors"
+                 → Skip to Phase 4 (review gate)
+
+Discovery only:  "What does this product actually do?"
+                 → Run Phase 1 only
+```
+
+## Anti-Patterns
 
 | Anti-Pattern | Why It Fails | Fix |
 |-------------|-------------|-----|
-| Feature list instead of value props | "We have X, Y, Z" doesn't answer "so what?" | Run 3-layer distillation on every feature |
-| Too many screenshots | Information overload, no focus | Each screenshot has ONE job — cut the rest |
-| "No competitors" on competition slide | Investors see naivety, not opportunity | Use 2x2 matrix with adjacent solutions |
-| Same language for investors and customers | Different audiences, different fears | Use audience matrix to reframe |
-| Showing full app UI in every screenshot | Navigation clutter, small content area | Hide nav, crop to the value-proving region |
-| Anonymized data that looks fake | Round numbers, perfect scores → "it's a demo" | Keep real magnitudes, realistic variance |
-| Problem slide as market education | Audience already knows the problem | Compress to one number + one scene, 20 sec |
+| Start with features, not pain | "We have X,Y,Z" ≠ "so what?" | Run Phase 2 JTBD first |
+| Skip the scanner, assume you know | Misses features buried in code | Let the scanner find surprises |
+| Same language for investors and customers | Different audiences, different fears | Use audience matrix |
+| AI-generated pitch without user research | Stays at feature level, fails Mom Test | Phase 2 forces persona + emotional layer |
+| Too many screenshots | Information overload | Each screenshot has ONE job |
+| "No competitors" slide | Investors see naivety | 2x2 matrix with adjacent solutions |
+| Fake-looking anonymized data | Round numbers, perfect scores | Keep real magnitudes + variance |
