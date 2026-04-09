@@ -84,7 +84,21 @@ from the codebase. No marketing spin yet.
     "age_of_project": ""
   },
   "pricing_hints": "",
-  "competitive_signals": "any competitor names found in docs/code"
+  "competitive_signals": "any competitor names found in docs/code",
+  "frontend": {
+    "has_ui": true,
+    "framework": "vue | react | next | angular | svelte | none",
+    "dev_command": "npm run dev",
+    "dev_port": 3000,
+    "router_file": "src/router/index.ts",
+    "routes": [
+      { "path": "/", "name": "Dashboard", "has_data": true },
+      { "path": "/settings", "name": "Settings", "has_data": false }
+    ],
+    "nav_element": "nav | aside | .sidebar (CSS selector for navigation)",
+    "auth_method": "cookie | token | oauth | none",
+    "auth_login_url": "/login"
+  }
 }
 ```
 
@@ -92,11 +106,24 @@ from the codebase. No marketing spin yet.
 
 ```
 Scan this codebase and extract product intelligence. Read these files in order:
+
 1. README.md and any doc/ files (understand positioning)
 2. Route/handler files (map features)
 3. DB schema/migrations (understand data model)
 4. Git log --oneline -100 (see recent work)
 5. i18n/test files (find user-facing language)
+
+Frontend detection (critical for screenshot pipeline):
+6. Check if frontend exists: look for package.json with vue/react/next/angular,
+   or a frontend/ / client/ / web/ / app/ directory
+7. Find router: Vue→src/router/, React→src/App.tsx or react-router config,
+   Next.js→app/ or pages/, Angular→app-routing.module.ts
+8. Extract ALL routes with their path and display name
+9. Find dev server command: package.json "dev"/"start"/"serve" script
+10. Find dev server port: vite.config (server.port), next.config, angular.json,
+    docker-compose.yml port mappings
+11. Identify nav element: look for <nav>, <aside>, sidebar component imports
+12. Identify auth: look for login page, auth middleware, OAuth config, JWT
 
 Output the JSON structure above. Be factual — extract what IS, don't invent
 what SHOULD BE. If a field can't be determined, write "unknown".
@@ -356,6 +383,101 @@ Visual asset types by effectiveness:
 
 See `references/visual-assets.md` for templates and detailed tool guides.
 See `references/frameworks.md` for JTBD templates and YC question lists.
+
+### Screenshot Capture Pipeline (GUI Products)
+
+When the scanner detects `frontend.has_ui = true`, this pipeline runs automatically.
+It uses the scanner's frontend detection to adapt to any framework.
+
+**Step 1 — Ensure frontend is running**
+
+```
+Check if frontend.dev_port is responding:
+  curl -s -o /dev/null -w "%{http_code}" http://localhost:<port>
+
+If not running:
+  - Read frontend.dev_command (e.g., "npm run dev")
+  - Check if Docker is running the frontend instead
+  - Start in background if needed, wait for port
+  
+If auth required:
+  - Navigate to frontend.auth_login_url
+  - Handle login flow (cookie/token/OAuth)
+```
+
+**Step 2 — Build screenshot plan from scanner data**
+
+The agent reads `frontend.routes` from Phase 1 scanner output and cross-references
+with Phase 3 Marketing Pro's feature selections to produce a screenshot plan:
+
+```
+For each route the Marketing Pro selected:
+  1. Determine screenshot job (category / value-proof / wow)
+  2. Decide viewport vs fullPage based on content density
+  3. Assign filename (numbered, descriptive)
+  4. Note any special handling (tab params, time range, scroll position)
+```
+
+**Step 3 — Detect and hide navigation**
+
+```
+Use frontend.nav_element from scanner to build CSS injection:
+
+  <nav_selector> { display: none !important; }
+  main, [role="main"] {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+
+If scanner couldn't detect nav_element:
+  → Take a test screenshot
+  → Visually identify the nav region
+  → Build CSS selector manually
+  → Verify with a second screenshot
+```
+
+**Step 4 — Build anonymization map**
+
+```
+If real user data is visible:
+  1. Navigate to a data-rich page (user list, activity feed)
+  2. Scan visible text for name patterns, emails, company names
+  3. Generate fake replacements preserving locale (zh/en)
+  4. Confirm map with user before proceeding
+  
+The anonymization function is injected via page.evaluate(fn):
+  CRITICAL: pass as function reference, NOT as string.
+  The function walks all text nodes, replaces matches longest-first,
+  also handles input/textarea values.
+```
+
+**Step 5 — Capture loop**
+
+```
+For each page in the screenshot plan:
+  1. page.goto(url, { waitUntil: 'networkidle' })
+  2. Wait for data (networkidle + buffer)
+  3. Inject nav-hide CSS via page.addStyleTag()
+  4. Inject anonymization via page.evaluate(fn)
+  5. Take screenshot (viewport or fullPage)
+  6. Verify: no nav visible, no real names, data loaded
+```
+
+**Step 6 — Post-capture verification**
+
+```
+For each screenshot:
+  ✓ Navigation hidden (no sidebar, no icon bar)
+  ✓ Real names replaced (spot-check against anon map)
+  ✓ Content fills viewport (no large empty margins)
+  ✓ Data is loaded (no spinners, no empty states)
+  ✓ Dark theme contrast OK (edges visible)
+```
+
+The screenshot plan is saved as `screenshot_plan.json` alongside the images,
+so future retakes reuse the same config.
+
+See `scripts/capture-screenshots.md` for the full agent prompt with code templates.
 
 ---
 
