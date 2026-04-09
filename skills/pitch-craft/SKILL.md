@@ -3,11 +3,14 @@ name: pitch-craft
 description: >
   Codebase-to-pitch pipeline — scans any SaaS project, identifies personas and pain
   points, then generates pitch deck and landing page materials. Use this skill whenever
-  creating or updating pitch decks, landing pages, investor materials, or marketing
-  pages. Also invoke when translating product features into selling points, retaking
-  product screenshots, or preparing for demos. Triggers: "make a pitch", "update the
-  pitch deck", "create a landing page", "how should we present this feature", "prepare
-  for the investor meeting", "what's our value proposition", "who are our users".
+  creating or updating pitch decks, landing pages, investor materials, marketing pages,
+  or product announcements. Also invoke when translating features into selling points,
+  retaking product screenshots, preparing for demos, or analyzing what problem a product
+  solves. Triggers: "make a pitch", "update the pitch deck", "create a landing page",
+  "how should we present this feature", "prepare for the investor meeting", "what's our
+  value proposition", "who are our users", "what problem does this solve", "who would
+  buy this", "investor deck", "fundraising materials", "product marketing", "feature
+  announcement", "做簡報", "投資人簡報", "產品頁面", "幫我做 pitch".
 ---
 
 # Pitch Craft
@@ -174,15 +177,19 @@ Map the user's emotional journey through the product:
 
 ### Seibel's Seven Questions (Validation)
 
-After the JTBD analysis, validate by answering Michael Seibel's seven questions:
+After the JTBD analysis, validate by answering Michael Seibel's seven questions.
+Items marked 🤖 can be derived from the codebase; items marked 👤 need founder input.
 
-1. **What do you do?** — Company name + one sentence + one concrete example
-2. **How big is the market?** — TAM/SAM with transparent math, not Gartner quotes
-3. **What's your traction?** — Numbers with time frame ("$0 to $10k MRR in 3 months")
-4. **What's your unique insight?** — What do you know that others don't?
-5. **What's your business model?** — How you make money, validated or assumed?
-6. **Who's your team?** — Specific achievements, not titles
-7. **What do you want?** — Exact amount + 18-24 month milestones
+1. 🤖 **What do you do?** — Company name + one sentence + one concrete example
+2. 👤 **How big is the market?** — TAM/SAM with transparent math *(founder provides numbers)*
+3. 🤖 **What's your traction?** — Extract from git history, user count, deployment age
+4. 🤖 **What's your unique insight?** — Infer from architecture choices and differentiators
+5. 👤 **What's your business model?** — How you charge *(founder confirms pricing)*
+6. 👤 **Who's your team?** — Specific achievements *(founder provides bios)*
+7. 👤 **What do you want?** — Amount + milestones *(founder defines ask)*
+
+For 👤 items, produce a clear prompt asking the founder to fill in specifics.
+Don't invent market sizes or team bios — flag them as "NEEDS FOUNDER INPUT".
 
 **Clarity test**: Send the one-liner to a smart friend. If they ask a clarifying question, rewrite. (Seibel's "Email Test")
 
@@ -214,13 +221,13 @@ After the JTBD analysis, validate by answering Michael Seibel's seven questions:
 - Customer: "..." (pain resolution, outcome)
 
 ## Seibel Seven Answers
-1. What we do: ...
-2. Market size: ...
-3. Traction: ...
-4. Unique insight: ...
-5. Business model: ...
-6. Team: ...
-7. Ask: ...
+1. 🤖 What we do: ...
+2. 👤 Market size: [NEEDS FOUNDER INPUT — provide TAM/SAM with math]
+3. 🤖 Traction: ...
+4. 🤖 Unique insight: ...
+5. 👤 Business model: [NEEDS FOUNDER INPUT — confirm pricing]
+6. 👤 Team: [NEEDS FOUNDER INPUT — provide bios]
+7. 👤 Ask: [NEEDS FOUNDER INPUT — amount + milestones]
 ```
 
 Produce one block per persona (typically 2-3 personas: buyer, user, champion).
@@ -386,98 +393,19 @@ See `references/frameworks.md` for JTBD templates and YC question lists.
 
 ### Screenshot Capture Pipeline (GUI Products)
 
-When the scanner detects `frontend.has_ui = true`, this pipeline runs automatically.
-It uses the scanner's frontend detection to adapt to any framework.
+When the scanner detects `frontend.has_ui = true`, the screenshot pipeline runs
+automatically. It uses scanner output (framework, routes, nav element, auth) to
+adapt to any project without hardcoded configuration.
 
-**Step 1 — Ensure frontend is running**
+The pipeline: detect/start frontend → build screenshot plan from routes → hide
+navigation via CSS injection → anonymize data via DOM text replacement → capture
+with Playwright → verify each screenshot (no nav, no real names, data loaded).
 
-```
-Check if frontend.dev_port is responding:
-  curl -s -o /dev/null -w "%{http_code}" http://localhost:<port>
+The screenshot plan is saved as `screenshot_plan.json` for future retakes.
 
-If not running:
-  - Read frontend.dev_command (e.g., "npm run dev")
-  - Check if Docker is running the frontend instead
-  - Start in background if needed, wait for port
-  
-If auth required:
-  - Navigate to frontend.auth_login_url
-  - Handle login flow (cookie/token/OAuth)
-```
-
-**Step 2 — Build screenshot plan from scanner data**
-
-The agent reads `frontend.routes` from Phase 1 scanner output and cross-references
-with Phase 3 Marketing Pro's feature selections to produce a screenshot plan:
-
-```
-For each route the Marketing Pro selected:
-  1. Determine screenshot job (category / value-proof / wow)
-  2. Decide viewport vs fullPage based on content density
-  3. Assign filename (numbered, descriptive)
-  4. Note any special handling (tab params, time range, scroll position)
-```
-
-**Step 3 — Detect and hide navigation**
-
-```
-Use frontend.nav_element from scanner to build CSS injection:
-
-  <nav_selector> { display: none !important; }
-  main, [role="main"] {
-    margin-left: 0 !important;
-    width: 100% !important;
-  }
-
-If scanner couldn't detect nav_element:
-  → Take a test screenshot
-  → Visually identify the nav region
-  → Build CSS selector manually
-  → Verify with a second screenshot
-```
-
-**Step 4 — Build anonymization map**
-
-```
-If real user data is visible:
-  1. Navigate to a data-rich page (user list, activity feed)
-  2. Scan visible text for name patterns, emails, company names
-  3. Generate fake replacements preserving locale (zh/en)
-  4. Confirm map with user before proceeding
-  
-The anonymization function is injected via page.evaluate(fn):
-  CRITICAL: pass as function reference, NOT as string.
-  The function walks all text nodes, replaces matches longest-first,
-  also handles input/textarea values.
-```
-
-**Step 5 — Capture loop**
-
-```
-For each page in the screenshot plan:
-  1. page.goto(url, { waitUntil: 'networkidle' })
-  2. Wait for data (networkidle + buffer)
-  3. Inject nav-hide CSS via page.addStyleTag()
-  4. Inject anonymization via page.evaluate(fn)
-  5. Take screenshot (viewport or fullPage)
-  6. Verify: no nav visible, no real names, data loaded
-```
-
-**Step 6 — Post-capture verification**
-
-```
-For each screenshot:
-  ✓ Navigation hidden (no sidebar, no icon bar)
-  ✓ Real names replaced (spot-check against anon map)
-  ✓ Content fills viewport (no large empty margins)
-  ✓ Data is loaded (no spinners, no empty states)
-  ✓ Dark theme contrast OK (edges visible)
-```
-
-The screenshot plan is saved as `screenshot_plan.json` alongside the images,
-so future retakes reuse the same config.
-
-See `scripts/capture-screenshots.md` for the full agent prompt with code templates.
+Read `scripts/capture-screenshots.md` for the full agent prompt with step-by-step
+instructions, input/output contracts, and Playwright code templates.
+Also see `references/screenshot-automation.md` for gotchas and sync/deploy checklist.
 
 ---
 
