@@ -55,6 +55,70 @@ from the codebase. No marketing spin yet.
 | `doc/specs/`, `doc/proposals/` | Original problem definitions |
 | Pricing config / feature flags | Tiers, experiments, unreleased capabilities |
 
+### Frontend Detection Logic
+
+The scanner must determine whether the product has a user-facing UI. This drives the
+entire visual strategy (screenshots vs code snippets vs diagrams).
+
+**Detection signals (check in order, stop at first confident match):**
+
+```
+Signal                                          → Type        Confidence
+─────────────────────────────────────────────────────────────────────────
+package.json has vue/react/next/angular/svelte   → gui         high
+frontend/ or client/ or web/ directory exists     → gui         high
+docker-compose has nginx/frontend service         → gui         high
+.html files with <script> or bundler config       → gui         medium
+Flask/Django/Rails with templates/ directory       → hybrid      medium
+Only Cargo.toml/go.mod with no JS dependencies    → cli/api     high
+Only Python with no web framework                  → cli/api     medium
+OpenAPI spec but no frontend code                  → api         medium
+main.rs/main.go with clap/cobra CLI framework      → cli         high
+Nothing conclusive                                 → unknown     —
+```
+
+**Fallback chain when detection is uncertain:**
+
+```
+1. Check README for screenshots or "getting started" with localhost URL
+   → If found: likely has UI, try to start and verify
+
+2. Check docker-compose for port mappings
+   → Ports 80/443/3000/3999/5173/8080 suggest web UI
+
+3. If still unknown → ASK the user:
+   "Does your product have a web interface? If yes, how do I start it?"
+
+4. If confirmed no UI → set frontend.has_ui = false, skip screenshot pipeline,
+   use non-UI visual strategy (code snippets, terminal recordings, diagrams)
+```
+
+**Fallback for partial detection (has UI but can't fully detect):**
+
+```
+frontend.has_ui = true but framework/router/port unknown:
+  → Ask user: "I see a frontend but can't detect how to start it.
+    What command starts the dev server? What port does it run on?"
+  → Fill in frontend.dev_command and frontend.dev_port from answer
+
+frontend running but router not found:
+  → Navigate to root URL, take a test screenshot
+  → Use browser snapshot to discover navigation links
+  → Build route list from visible nav items instead of code analysis
+
+frontend running but nav element not detected:
+  → Take screenshot of any page
+  → Visually identify navigation region (left sidebar? top bar? none?)
+  → Build CSS hide selector from observed DOM structure
+  → If no nav visible, skip nav hiding (some SPAs have no persistent nav)
+
+frontend running but auth blocks access:
+  → Check for /login route or OAuth redirect
+  → Ask user: "The app redirects to login. Can you provide test credentials
+    or a session cookie?"
+  → If no auth available, screenshot only public pages (login, landing, docs)
+```
+
 ### Scanner Output Contract
 
 ```json
@@ -108,28 +172,12 @@ from the codebase. No marketing spin yet.
 ### Scanner Prompt Template
 
 ```
-Scan this codebase and extract product intelligence. Read these files in order:
+Scan this codebase. Use the "What to Scan" table and "Frontend Detection Logic"
+above as your checklist. Output the JSON contract above.
 
-1. README.md and any doc/ files (understand positioning)
-2. Route/handler files (map features)
-3. DB schema/migrations (understand data model)
-4. Git log --oneline -100 (see recent work)
-5. i18n/test files (find user-facing language)
-
-Frontend detection (critical for screenshot pipeline):
-6. Check if frontend exists: look for package.json with vue/react/next/angular,
-   or a frontend/ / client/ / web/ / app/ directory
-7. Find router: Vue→src/router/, React→src/App.tsx or react-router config,
-   Next.js→app/ or pages/, Angular→app-routing.module.ts
-8. Extract ALL routes with their path and display name
-9. Find dev server command: package.json "dev"/"start"/"serve" script
-10. Find dev server port: vite.config (server.port), next.config, angular.json,
-    docker-compose.yml port mappings
-11. Identify nav element: look for <nav>, <aside>, sidebar component imports
-12. Identify auth: look for login page, auth middleware, OAuth config, JWT
-
-Output the JSON structure above. Be factual — extract what IS, don't invent
-what SHOULD BE. If a field can't be determined, write "unknown".
+Be factual — extract what IS, don't invent what SHOULD BE.
+If a field can't be determined, write "unknown" and note why.
+For frontend fields, follow the fallback chain if detection is uncertain.
 ```
 
 ---
